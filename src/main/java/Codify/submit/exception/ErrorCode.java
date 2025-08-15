@@ -10,6 +10,11 @@ public enum ErrorCode {
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "E3", "서버 에러가 발생했습니다."),
     NOT_FOUND(HttpStatus.NOT_FOUND, "E4", "존재하지 않는 엔티티입니다."),
 
+    SUBJECT_ALREADY_EXISTS(HttpStatus.CONFLICT, "S1", "이미 존재하는 과목입니다"),
+    EMPTY_SUBJECT_NAME(HttpStatus.BAD_REQUEST, "S2", "과목명이 비어있습니다."),
+
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U1", "존재하지 않는 사용자입니다."),
+
     ARTICLE_NOT_FOUND(HttpStatus.NOT_FOUND, "A1", "존재하지 않는 아티클입니다.");
 
     private final HttpStatus status; //http 상태 코드
