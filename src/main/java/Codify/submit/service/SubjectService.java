@@ -5,11 +5,9 @@ import Codify.submit.exception.InvalidSubjectNameException;
 import Codify.submit.exception.SubjectAlreadyExistsException;
 import Codify.submit.exception.UserNotFoundException;
 import Codify.submit.repository.SubjectRepository;
+import Codify.submit.repository.UserRepository;
 import Codify.submit.web.dto.SubjectRequestDto;
 import lombok.RequiredArgsConstructor;
-import org.hibernate.exception.ConstraintViolationException;
-import org.springframework.core.NestedExceptionUtils;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,30 +17,30 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SubjectService {
     private final SubjectRepository subjectRepository;
+    private final UserRepository userRepository;
 
     @Transactional
     public Long create(UUID userUuid, SubjectRequestDto subjectRequestDto) {
-        String raw = subjectRequestDto.getSubjectName();
+        String name = normalize(subjectRequestDto.getSubjectName());
+
+        // 1. 로그인은 했지만 DB에 존재하지 않는 경우
+        if (!userRepository.existsById(userUuid)) {
+            throw new UserNotFoundException();
+        }
+
+        // 2. 같은 사용자(교수)가 동일한 과목을 생성하는 경우
+        if (subjectRepository.existsByUserUuidAndSubjectName(userUuid, name)) {
+            throw new SubjectAlreadyExistsException();
+        }
+
+        Subjects saved = subjectRepository.save(new Subjects(userUuid, name));
+        return saved.getSubjectId();
+    }
+
+    private String normalize(String raw) {
         if (raw == null || raw.trim().isEmpty()) {
             throw new InvalidSubjectNameException();
         }
-        String name = raw.trim();
-
-        try {
-            Subjects saved = subjectRepository.save(new Subjects(userUuid, name));
-            return saved.getSubjectId();
-        } catch (DataIntegrityViolationException e) {
-            // custom exception
-            // 제약이름으로만 잡히지 않는 에러가 있어서 MySQL 에러코드로도 처리 (1062=중복, 1452=FK 위반)
-            Throwable root = NestedExceptionUtils.getMostSpecificCause(e);
-            if (root instanceof java.sql.SQLIntegrityConstraintViolationException sqlx) {
-                int code = sqlx.getErrorCode();
-                // 중복된 과목은 스프링 시큐리티 구현 후 추가 예정
-                // if (code == 1062) throw new SubjectAlreadyExistsException();
-                if (code == 1452) throw new UserNotFoundException();
-            }
-            // 그 외: 전역 핸들러
-            throw e;
-        }
+        return raw.trim();
     }
 }
