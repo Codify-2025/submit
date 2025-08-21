@@ -1,0 +1,21 @@
+package Codify.submit.domain;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+import java.util.UUID;
+
+@Getter
+@Entity
+@Table(name = "Users")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Users { // 조회 용도로만 사용중
+    @Id
+    @Column(name = "userUuid")
+    private UUID userUuid;
+}

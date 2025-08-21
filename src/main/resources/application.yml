@@ -29,3 +29,8 @@ eureka:
 
   instance:
     prefer-ip-address: true
+
+codify:
+  dev:
+    user-uuid: ${USER-UUID}
+
