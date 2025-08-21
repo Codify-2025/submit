@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -20,7 +21,7 @@ public class SubjectService {
     private final UserRepository userRepository;
 
     @Transactional
-    public Long create(UUID userUuid, SubjectRequestDto subjectRequestDto) {
+    public Long createSubject(UUID userUuid, SubjectRequestDto subjectRequestDto) {
         String name = normalize(subjectRequestDto.getSubjectName());
 
         // 1. 로그인은 했지만 DB에 존재하지 않는 경우
@@ -42,5 +43,14 @@ public class SubjectService {
             throw new InvalidSubjectNameException();
         }
         return raw.trim();
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> listSubjectNameByUser(UUID userUuid) {
+        // 존재하지 않는 사용자
+        if (!userRepository.existsById(userUuid)) {
+            throw new UserNotFoundException();
+        }
+        return subjectRepository.findSubjectNamesByUserUuid(userUuid);
     }
 }

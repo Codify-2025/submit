@@ -1,5 +1,6 @@
 package Codify.submit.web.controller;
 
+import Codify.submit.exception.ApiSuccessResponse;
 import Codify.submit.exception.ErrorCode;
 import Codify.submit.exception.UnauthenticatedException;
 import Codify.submit.exception.baseException.BaseException;
@@ -10,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 
@@ -19,8 +21,9 @@ import java.util.UUID;
 public class SubjectController {
     private final SubjectService subjectService;
 
+    // 새로운 과목 생성하기
     @PostMapping
-    public ResponseEntity<SubjectResponseDto> create(
+    public ResponseEntity<ApiSuccessResponse<SubjectResponseDto>> createSubject(
             @RequestHeader("USER-UUID") String userUuidHeader, // 임시, 스프링 시큐리티 구현 후 대체 예정
             @RequestBody SubjectRequestDto subjectRequestDto
     ){
@@ -35,7 +38,27 @@ public class SubjectController {
             throw new BaseException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
-        Long id = subjectService.create(userUuid, subjectRequestDto);
-        return ResponseEntity.status(200).body(new SubjectResponseDto(id, "과목이 성공적으로 생성되었습니다."));
+        Long id = subjectService.createSubject(userUuid, subjectRequestDto);
+        SubjectResponseDto apiPayload = new SubjectResponseDto(id);
+        return ResponseEntity.ok(ApiSuccessResponse.ok("과목 생성 성공",apiPayload));
+    }
+
+    // 기존 과목 조회하기
+    @GetMapping
+    public ResponseEntity<ApiSuccessResponse<List<String>>> listSubject(
+            @RequestHeader("USER-UUID") String userUuidHeader
+    ) {
+        if (userUuidHeader == null || userUuidHeader.isBlank()) {
+            throw new UnauthenticatedException();
+        }
+        final UUID userUuid;
+        try {
+            userUuid = UUID.fromString(userUuidHeader);
+        } catch (IllegalArgumentException illegalArgumentException) {
+            throw new BaseException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+
+        List<String> subjects = subjectService.listSubjectNameByUser(userUuid);
+        return ResponseEntity.ok(ApiSuccessResponse.ok("과목 목록 조회 성공", subjects));
     }
 }
