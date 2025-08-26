@@ -103,7 +103,7 @@ jobs:
           script: |
             set -e
             for i in {1..12}; do
-              code=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${{ env.NEW_PORT }}/test/hc" || true)
+              code=$(curl -s -o /dev/null -w "%{http_code}" -L "http://127.0.0.1:${{ env.NEW_PORT }}/test/hc" || true)
               echo "attempt $i -> $code"
               [ "$code" = "200" ] && exit 0
               sleep 5
