@@ -40,28 +40,41 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    env:
+       NGINX_CONTAINER: gateway-test-nginx-1 
+       SUBMIT_DIR: /home/submit
     steps:
-      # 현재 붙어있는 submit 색상 읽기(없으면 green으로 가정)
+      # 현재 붙어있는 submit 색상 읽기
       - name: Decide target color
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.LIVE_SERVER_IP }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          script_stop: true
+          capture_stdout: true
           script: |
             set -e
-            CURRENT=$(sudo docker exec nginx sh -lc "grep -oE '(submit_blue|submit_green)' /etc/nginx/conf.d/service-submit.inc" || echo submit_green)
-            if [ "$CURRENT" = "submit_blue" ]; then
-              echo "TARGET=green" >> $GITHUB_ENV
-              echo "NEW_PORT=8186" >> $GITHUB_ENV
-              echo "OLD_CONTAINER=submit-blue" >> $GITHUB_ENV
+            if sudo docker inspect "${{ env.NGINX_CONTAINER }}" >/dev/null 2>&1; then
+              CURRENT=$(sudo docker exec "${{ env.NGINX_CONTAINER }}" sh -lc "grep -oE '(submit_blue|submit_green)' /etc/nginx/conf.d/service-submit.inc" || echo submit_green)
             else
-              echo "TARGET=blue" >> $GITHUB_ENV
-              echo "NEW_PORT=8086" >> $GITHUB_ENV
-              echo "OLD_CONTAINER=submit-green" >> $GITHUB_ENV
+              CURRENT=submit_green
             fi
 
+            if [ "$CURRENT" = "submit_blue" ]; then
+              echo "TARGET=green NEW_PORT=8186 OLD_CONTAINER=submit-blue"
+            else
+              echo "TARGET=blue NEW_PORT=8086 OLD_CONTAINER=submit-green"
+            fi
+
+      # 러너에서 env로 export
+      - name: Export deploy envs
+        run: |
+          echo "${{ steps.decide.outputs.stdout }}"
+          eval ${{ steps.decide.outputs.stdout }}
+          echo "TARGET=$TARGET" >> $GITHUB_ENV
+          echo "NEW_PORT=$NEW_PORT" >> $GITHUB_ENV
+          echo "OLD_CONTAINER=$OLD_CONTAINER" >> $GITHUB_ENV
+          
       # 새 이미지 pull & 대상 컨테이너 up
       - name: Pull & Up target container
         uses: appleboy/ssh-action@master
@@ -69,10 +82,9 @@ jobs:
           host: ${{ secrets.LIVE_SERVER_IP }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          script_stop: true
           script: |
             set -e
-            cd /home/submit
+            cd "${{ env.SUBMIT_DIR }}"
             export DOCKER_IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/submit:latest
             sudo docker pull $DOCKER_IMAGE
             if [ "${{ env.TARGET }}" = "blue" ]; then
@@ -88,7 +100,6 @@ jobs:
           host: ${{ secrets.LIVE_SERVER_IP }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          script_stop: true
           script: |
             set -e
             for i in {1..12}; do
@@ -106,11 +117,10 @@ jobs:
           host: ${{ secrets.LIVE_SERVER_IP }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          script_stop: true
           script: |
             set -e
             if [ "${{ env.TARGET }}" = "blue" ]; then VAL="submit_blue"; else VAL="submit_green"; fi
-            sudo docker exec -i nginx sh -lc "echo 'set \$submit_url $VAL;' > /etc/nginx/conf.d/service-submit.inc && nginx -s reload"
+            sudo docker exec -i "${{ env.NGINX_CONTAINER }}" sh -lc "echo 'set \$submit_url $VAL;' > /etc/nginx/conf.d/service-submit.inc && nginx -t && nginx -s reload"
 
       # 기존 컨테이너 정리
       - name: Stop old container
@@ -119,6 +129,5 @@ jobs:
           host: ${{ secrets.LIVE_SERVER_IP }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          script_stop: true
           script: |
             sudo docker rm -f ${{ env.OLD_CONTAINER }} || true
