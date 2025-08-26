@@ -1,0 +1,124 @@
+name: submit-ci-cd
+on:
+  push:
+    branches: ["feature/#5/ci-cd"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+
+      - name: Build with Gradle
+        run: ./gradlew clean bootJar -x test
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build & Push Image
+        run: |
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/submit:latest .
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/submit:latest
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      # 현재 붙어있는 submit 색상 읽기(없으면 green으로 가정)
+      - name: Decide target color
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.LIVE_SERVER_IP }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+            CURRENT=$(sudo docker exec nginx sh -lc "grep -oE '(submit_blue|submit_green)' /etc/nginx/conf.d/service-submit.inc" || echo submit_green)
+            if [ "$CURRENT" = "submit_blue" ]; then
+              echo "TARGET=green" >> $GITHUB_ENV
+              echo "NEW_PORT=8186" >> $GITHUB_ENV
+              echo "OLD_CONTAINER=submit-blue" >> $GITHUB_ENV
+            else
+              echo "TARGET=blue" >> $GITHUB_ENV
+              echo "NEW_PORT=8086" >> $GITHUB_ENV
+              echo "OLD_CONTAINER=submit-green" >> $GITHUB_ENV
+            fi
+
+      # 새 이미지 pull & 대상 컨테이너 up
+      - name: Pull & Up target container
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.LIVE_SERVER_IP }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+            cd /home/submit
+            export DOCKER_IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/submit:latest
+            sudo docker pull $DOCKER_IMAGE
+            if [ "${{ env.TARGET }}" = "blue" ]; then
+              DOCKER_IMAGE=$DOCKER_IMAGE sudo -E docker compose -f docker-compose-submit-blue.yml up -d submit-blue
+            else
+              DOCKER_IMAGE=$DOCKER_IMAGE sudo -E docker compose -f docker-compose-submit-green.yml up -d submit-green
+            fi
+
+      # 새 컨테이너 내부 헬스체크 (EC2 로컬에서 직접)
+      - name: Health check new container
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.LIVE_SERVER_IP }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+            for i in {1..12}; do
+              code=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${{ env.NEW_PORT }}/test/hc" || true)
+              echo "attempt $i -> $code"
+              [ "$code" = "200" ] && exit 0
+              sleep 5
+            done
+            echo "New target did not become healthy"; exit 1
+
+      # NGINX 스위치 (service-submit.inc 갱신 후 reload)
+      - name: Switch NGINX to target color
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.LIVE_SERVER_IP }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+            if [ "${{ env.TARGET }}" = "blue" ]; then VAL="submit_blue"; else VAL="submit_green"; fi
+            sudo docker exec -i nginx sh -lc "echo 'set \$submit_url $VAL;' > /etc/nginx/conf.d/service-submit.inc && nginx -s reload"
+
+      # 기존 컨테이너 정리
+      - name: Stop old container
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.LIVE_SERVER_IP }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: true
+          script: |
+            sudo docker rm -f ${{ env.OLD_CONTAINER }} || true
