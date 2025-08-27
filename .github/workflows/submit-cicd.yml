@@ -56,7 +56,7 @@ jobs:
           script: |
             set -e
             if sudo docker inspect "${{ env.NGINX_CONTAINER }}" >/dev/null 2>&1; then
-              CURRENT=$(sudo docker exec "${{ env.NGINX_CONTAINER }}" sh -lc "grep -oE '(submit-blue|submit-green)' /etc/nginx/conf.d/service-submit.inc" || echo submit-green)
+              CURRENT=$(sudo docker exec "${{ env.NGINX_CONTAINER }}" sh -lc "grep -oE 'submit-(blue|green)' /etc/nginx/conf.d/service-submit.inc" || echo submit-green)
             else
               CURRENT=submit-green
             fi
@@ -69,9 +69,16 @@ jobs:
 
       # 러너에서 env로 export
       - name: Export deploy envs
+        shell: bash
         run: |
-          echo "${{ steps.decide.outputs.stdout }}"
-          eval ${{ steps.decide.outputs.stdout }}
+          OUT="${{ steps.decide.outputs.stdout }}"
+          echo "$OUT"
+          TARGET=$(echo "$OUT" | grep -oE 'TARGET=(blue|green)' | tail -n1 | cut -d= -f2)
+          NEW_PORT=$(echo "$OUT" | grep -oE 'NEW_PORT=[0-9]+'   | tail -n1 | cut -d= -f2)
+          OLD_CONTAINER=$(echo "$OUT" | grep -oE 'OLD_CONTAINER=submit-(blue|green)' | tail -n1 | cut -d= -f2)
+          [ -z "$TARGET" ] && echo "TARGET missing" && exit 1
+          [ -z "$NEW_PORT" ] && echo "NEW_PORT missing" && exit 1
+          [ -z "$OLD_CONTAINER" ] && echo "OLD_CONTAINER missing" && exit 1
           echo "TARGET=$TARGET" >> $GITHUB_ENV
           echo "NEW_PORT=$NEW_PORT" >> $GITHUB_ENV
           echo "OLD_CONTAINER=$OLD_CONTAINER" >> $GITHUB_ENV
