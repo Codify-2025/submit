@@ -19,7 +19,8 @@ public class HealthCheckController {
         return ResponseEntity.ok(Map.of(
                 "status","UP",
                 "env",env,
-                "port",port
+                "port",port,
+                "name", "김유진"
         ));
     }
 
