@@ -41,7 +41,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     env:
-       NGINX_CONTAINER: gateway-test-nginx-1 
+       NGINX_CONTAINER: nginx
        SUBMIT_DIR: /home/submit
     steps:
       # 현재 붙어있는 submit 색상 읽기
