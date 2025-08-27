@@ -46,6 +46,7 @@ jobs:
     steps:
       # 현재 붙어있는 submit 색상 읽기
       - name: Decide target color
+        id: decide
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.LIVE_SERVER_IP }}
@@ -55,12 +56,12 @@ jobs:
           script: |
             set -e
             if sudo docker inspect "${{ env.NGINX_CONTAINER }}" >/dev/null 2>&1; then
-              CURRENT=$(sudo docker exec "${{ env.NGINX_CONTAINER }}" sh -lc "grep -oE '(submit_blue|submit_green)' /etc/nginx/conf.d/service-submit.inc" || echo submit_green)
+              CURRENT=$(sudo docker exec "${{ env.NGINX_CONTAINER }}" sh -lc "grep -oE '(submit-blue|submit-green)' /etc/nginx/conf.d/service-submit.inc" || echo submit-green)
             else
-              CURRENT=submit_green
+              CURRENT=submit-green
             fi
 
-            if [ "$CURRENT" = "submit_blue" ]; then
+            if [ "$CURRENT" = "submit-blue" ]; then
               echo "TARGET=green NEW_PORT=8186 OLD_CONTAINER=submit-blue"
             else
               echo "TARGET=blue NEW_PORT=8086 OLD_CONTAINER=submit-green"
@@ -121,8 +122,8 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             set -e
-            if [ "${{ env.TARGET }}" = "blue" ]; then VAL="submit_blue"; else VAL="submit_green"; fi
-            sudo docker exec -i "${{ env.NGINX_CONTAINER }}" sh -lc "echo 'set \$submit_url $VAL;' > /etc/nginx/conf.d/service-submit.inc && nginx -t && nginx -s reload"
+            if [ "${{ env.TARGET }}" = "blue" ]; then VAL="submit-blue"; else VAL="submit-green"; fi
+            sudo docker exec -i "${{ env.NGINX_CONTAINER }}" sh -lc "echo 'set \$submit_host $VAL;' > /etc/nginx/conf.d/service-submit.inc && nginx -t && nginx -s reload"
 
       # 기존 컨테이너 정리
       - name: Stop old container

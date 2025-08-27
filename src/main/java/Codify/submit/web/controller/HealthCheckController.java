@@ -11,7 +11,7 @@ public class HealthCheckController {
     @Value("${server.port}")
     private String port;
 
-    @Value("${SECRET_ENV:unknown}")
+    @Value("${SERVER_ENV:unknown}")
     private String env;
 
     @GetMapping("/hc")
