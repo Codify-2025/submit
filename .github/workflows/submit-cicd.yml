@@ -77,10 +77,8 @@ jobs:
           TARGET=$(echo "$OUT" | grep -oE 'TARGET=(blue|green)' | tail -n1 | cut -d= -f2)
           OLD_CONTAINER=$(echo "$OUT" | grep -oE 'OLD_CONTAINER=submit-(blue|green)' | tail -n1 | cut -d= -f2)
           [ -z "$TARGET" ] && echo "TARGET missing" && exit 1
-          [ -z "$NEW_PORT" ] && echo "NEW_PORT missing" && exit 1
           [ -z "$OLD_CONTAINER" ] && echo "OLD_CONTAINER missing" && exit 1
           echo "TARGET=$TARGET" >> $GITHUB_ENV
-          echo "NEW_PORT=$NEW_PORT" >> $GITHUB_ENV
           echo "OLD_CONTAINER=$OLD_CONTAINER" >> $GITHUB_ENV
           
       # 새 이미지 pull & 대상 컨테이너 up
