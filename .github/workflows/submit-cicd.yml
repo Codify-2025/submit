@@ -111,7 +111,7 @@ jobs:
             if [ "${{ env.TARGET }}" = "blue" ]; then TARGET_CONTAINER=submit-blue; else TARGET_CONTAINER=submit-green; fi
             for i in {1..12}; do
               code=$(sudo docker run --rm --network codify_net curlimages/curl:8.10.1 \
-                       -s -o /dev/null -w '%{http_code}' http://$TARGET_CONTAINER:8080/test/hc || true)
+                       -s -o /dev/null -w '%{http_code}' http://$TARGET_CONTAINER:8080/api/submit/test/hc|| true)
               echo "attempt $i -> $code"
               [ "$code" = "200" ] && exit 0
               sleep 5
