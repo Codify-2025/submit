@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/test")
+@RequestMapping("/api/submit")
 public class HealthCheckController {
     @Value("${server.port}")
     private String port;
@@ -14,7 +14,7 @@ public class HealthCheckController {
     @Value("${SERVER_ENV:unknown}")
     private String env;
 
-    @GetMapping("/hc")
+    @GetMapping("/test/hc")
     public ResponseEntity<Map<String, String>> hc() {
         return ResponseEntity.ok(Map.of(
                 "status","UP",
