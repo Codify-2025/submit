@@ -56,9 +56,8 @@ jobs:
           script: |
             set -e
             if [ -f /home/nginx/active-color.inc ]; then
-              CURRENT=$(grep -oE '(blue|green)' /home/nginx/active-color.inc 2>/dev/null || true)
-            fi
-            [ -z "$CURRENT" ] && CURRENT=green
+              CURRENT=$(grep -oE '(blue|green)' /home/nginx/active-color.inc 2>/dev/null | head -n1 || true)
+              [ -z "$CURRENT" ] && CURRENT=green
 
             if [ "$CURRENT" = "blue" ]; then
               echo "TARGET=green"
@@ -129,9 +128,13 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             set -e
-            sudo bash -lc 'printf "set \$ACTIVE_COLOR %s;\n" "${{ env.TARGET }}" > /home/nginx/active-color.inc'
-            sudo docker exec nginx nginx -t
-            sudo docker exec nginx nginx -s reload
+            sudo bash -lc 'cat > /home/nginx/active-color.inc <<EOF
+            map \$request_uri \$X_COLOR {
+                default "";
+                ~^/api/submit/ ${{ env.TARGET }};
+            }
+            EOF'
+            sudo docker exec nginx nginx -t && sudo docker exec nginx nginx -s reload
         
       # 기존 컨테이너 정리
       - name: Stop old container
