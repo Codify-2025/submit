@@ -55,11 +55,10 @@ jobs:
           capture_stdout: true
           script: |
             set -e
-            if sudo docker inspect "${{ env.NGINX_CONTAINER }}" >/dev/null 2>&1; then
-              CURRENT=$(sudo docker exec "${{ env.NGINX_CONTAINER }}" sh -lc "grep -oE '(blue|green)' /etc/nginx/conf.d/active-color.inc" || echo green)
-            else
-              CURRENT=green
+            if [ -f /home/nginx/active-color.inc ]; then
+              CURRENT=$(grep -oE '(blue|green)' /home/nginx/active-color.inc 2>/dev/null || true)
             fi
+            [ -z "$CURRENT" ] && CURRENT=green
 
             if [ "$CURRENT" = "blue" ]; then
               echo "TARGET=green"
@@ -130,8 +129,10 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             set -e
-            sudo docker exec -i "${{ env.NGINX_CONTAINER }}" sh -lc \
-              "echo 'set \$ACTIVE_COLOR ${{ env.TARGET }};' > /etc/nginx/conf.d/active-color.inc && nginx -t && nginx -s reload"
+            sudo bash -lc 'printf "set \$ACTIVE_COLOR %s;\n" "${{ env.TARGET }}" > /home/nginx/active-color.inc'
+            sudo docker exec nginx nginx -t
+            sudo docker exec nginx nginx -s reload
+        
       # 기존 컨테이너 정리
       - name: Stop old container
         uses: appleboy/ssh-action@master
