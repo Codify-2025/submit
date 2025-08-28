@@ -20,7 +20,7 @@ public class HealthCheckController {
                 "status","UP",
                 "env",env,
                 "port",port,
-                "name", "김유진"
+                "name", "김유진2"
         ));
     }
 
