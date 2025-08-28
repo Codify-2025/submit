@@ -56,15 +56,17 @@ jobs:
           script: |
             set -e
             if sudo docker inspect "${{ env.NGINX_CONTAINER }}" >/dev/null 2>&1; then
-              CURRENT=$(sudo docker exec "${{ env.NGINX_CONTAINER }}" sh -lc "grep -oE 'submit-(blue|green)' /etc/nginx/conf.d/service-submit.inc" || echo submit-green)
+              CURRENT=$(sudo docker exec "${{ env.NGINX_CONTAINER }}" sh -lc "grep -oE '(blue|green)' /etc/nginx/conf.d/active-color.inc" || echo green)
             else
-              CURRENT=submit-green
+              CURRENT=green
             fi
 
-            if [ "$CURRENT" = "submit-blue" ]; then
-              echo "TARGET=green NEW_PORT=8186 OLD_CONTAINER=submit-blue"
+            if [ "$CURRENT" = "blue" ]; then
+              echo "TARGET=green"
+              echo "OLD_CONTAINER=submit-blue"
             else
-              echo "TARGET=blue NEW_PORT=8086 OLD_CONTAINER=submit-green"
+              echo "TARGET=blue"
+              echo "OLD_CONTAINER=submit-green"
             fi
 
       # 러너에서 env로 export
@@ -74,7 +76,6 @@ jobs:
           OUT="${{ steps.decide.outputs.stdout }}"
           echo "$OUT"
           TARGET=$(echo "$OUT" | grep -oE 'TARGET=(blue|green)' | tail -n1 | cut -d= -f2)
-          NEW_PORT=$(echo "$OUT" | grep -oE 'NEW_PORT=[0-9]+'   | tail -n1 | cut -d= -f2)
           OLD_CONTAINER=$(echo "$OUT" | grep -oE 'OLD_CONTAINER=submit-(blue|green)' | tail -n1 | cut -d= -f2)
           [ -z "$TARGET" ] && echo "TARGET missing" && exit 1
           [ -z "$NEW_PORT" ] && echo "NEW_PORT missing" && exit 1
@@ -129,9 +130,8 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             set -e
-            if [ "${{ env.TARGET }}" = "blue" ]; then VAL="submit-blue"; else VAL="submit-green"; fi
-            sudo docker exec -i "${{ env.NGINX_CONTAINER }}" sh -lc "echo 'set \$submit_host $VAL;' > /etc/nginx/conf.d/service-submit.inc && nginx -t && nginx -s reload"
-
+            sudo docker exec -i "${{ env.NGINX_CONTAINER }}" sh -lc \
+              "echo 'set \$ACTIVE_COLOR ${{ env.TARGET }};' > /etc/nginx/conf.d/active-color.inc && nginx -t && nginx -s reload"
       # 기존 컨테이너 정리
       - name: Stop old container
         uses: appleboy/ssh-action@master
