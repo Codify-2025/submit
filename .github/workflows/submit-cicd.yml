@@ -80,7 +80,40 @@ jobs:
           [ -z "$OLD_CONTAINER" ] && echo "OLD_CONTAINER missing" && exit 1
           echo "TARGET=$TARGET" >> $GITHUB_ENV
           echo "OLD_CONTAINER=$OLD_CONTAINER" >> $GITHUB_ENV
+      
+      # 시크릿 파일 렌더링
+      - name: Render/Update submit secrets (idempotent)
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.LIVE_SERVER_IP }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            sudo mkdir -p /home/secrets/submit
+            TMP=/home/secrets/submit/datasource.properties.tmp
+            DST=/home/secrets/submit/datasource.properties
+
+            sudo bash -lc "cat > $TMP <<'EOF'
+            spring.datasource.url=${{ secrets.DB_HOST }}
+            spring.datasource.username=${{ secrets.DB_USER }}
+            spring.datasource.password=${{ secrets.DB_PASSWORD }}
+            spring.jpa.hibernate.ddl-auto=update
+            EOF"
+            
+            sudo chown root:root "$TMP"
+            sudo chmod 600 "$TMP"
+
+            # 변경 감지
+            if [ -f "$DST" ] && cmp -s "$TMP" "$DST"; then
+              echo "SECRETS_CHANGED=0" >> $GITHUB_ENV
+              sudo rm -f "$TMP"
+            else
+              echo "SECRETS_CHANGED=1" >> $GITHUB_ENV
+              sudo mv -f "$TMP" "$DST"
+            fi
           
+      
       # 새 이미지 pull & 대상 컨테이너 up
       - name: Pull & Up target container
         uses: appleboy/ssh-action@master
