@@ -83,11 +83,13 @@ jobs:
       
       # 시크릿 파일 렌더링
       - name: Render/Update submit secrets (idempotent)
+        id: render
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.LIVE_SERVER_IP }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
+          capture_stdout: true
           script: |
             set -e
             sudo mkdir -p /home/secrets/submit
@@ -106,14 +108,22 @@ jobs:
 
             # 변경 감지
             if [ -f "$DST" ] && cmp -s "$TMP" "$DST"; then
-              echo "SECRETS_CHANGED=0" >> $GITHUB_ENV
+              echo "SECRETS_CHANGED=0"
               sudo rm -f "$TMP"
             else
-              echo "SECRETS_CHANGED=1" >> $GITHUB_ENV
+              echo "SECRETS_CHANGED=1"
               sudo mv -f "$TMP" "$DST"
             fi
-          
-      
+            
+      - name: Export SECRETS_CHANGED to runner env
+        shell: bash
+        run: |
+          if echo "${{ steps.render.outputs.stdout }}" | grep -q "SECRETS_CHANGED=1"; then
+            echo "SECRETS_CHANGED=1" >> $GITHUB_ENV
+          else
+            echo "SECRETS_CHANGED=0" >> $GITHUB_ENV
+          fi
+             
       # 새 이미지 pull & 대상 컨테이너 up
       - name: Pull & Up target container
         uses: appleboy/ssh-action@master
