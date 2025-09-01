@@ -9,5 +9,4 @@ import lombok.*;
 @AllArgsConstructor
 public class SubjectResponseDto {
     private Long subjectId;
-    private String message;
 }

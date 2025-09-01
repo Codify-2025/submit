@@ -1,5 +1,6 @@
 package Codify.submit.web.controller;
 
+import Codify.submit.exception.ApiSuccessResponse;
 import Codify.submit.exception.ErrorCode;
 import Codify.submit.exception.UnauthenticatedException;
 import Codify.submit.exception.baseException.BaseException;
@@ -10,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 
@@ -19,23 +21,24 @@ import java.util.UUID;
 public class SubjectController {
     private final SubjectService subjectService;
 
+    // 새로운 과목 생성하기
     @PostMapping
-    public ResponseEntity<SubjectResponseDto> create(
+    public ResponseEntity<SubjectResponseDto> createSubject(
             @RequestHeader("USER-UUID") String userUuidHeader, // 임시, 스프링 시큐리티 구현 후 대체 예정
             @RequestBody SubjectRequestDto subjectRequestDto
     ){
-        // 유효한 입력인지 판단
-        if (userUuidHeader == null || userUuidHeader.isBlank()) {
-            throw new UnauthenticatedException();
-        }
-        final UUID userUuid;
-        try {
-            userUuid = UUID.fromString(userUuidHeader);
-        } catch (IllegalArgumentException ex) {
-            throw new BaseException(ErrorCode.INVALID_INPUT_VALUE);
-        }
+        final UUID userUuid = UUID.fromString(userUuidHeader);
+        Long id = subjectService.createSubject(userUuid, subjectRequestDto);
+        return ResponseEntity.ok(new SubjectResponseDto(id));
+    }
 
-        Long id = subjectService.create(userUuid, subjectRequestDto);
-        return ResponseEntity.status(200).body(new SubjectResponseDto(id, "과목이 성공적으로 생성되었습니다."));
+    // 기존 과목 조회하기
+    @GetMapping
+    public ResponseEntity<List<String>> listSubject(
+            @RequestHeader("USER-UUID") String userUuidHeader
+    ) {
+        final UUID userUuid = UUID.fromString(userUuidHeader);
+        List<String> subjects = subjectService.listSubjectNameByUser(userUuid);
+        return ResponseEntity.ok(subjects);
     }
 }

@@ -3,6 +3,7 @@ package Codify.submit.service;
 import Codify.submit.domain.Subjects;
 import Codify.submit.exception.InvalidSubjectNameException;
 import Codify.submit.exception.SubjectAlreadyExistsException;
+import Codify.submit.exception.UnauthenticatedException;
 import Codify.submit.exception.UserNotFoundException;
 import Codify.submit.repository.SubjectRepository;
 import Codify.submit.repository.UserRepository;
@@ -11,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -20,8 +22,13 @@ public class SubjectService {
     private final UserRepository userRepository;
 
     @Transactional
-    public Long create(UUID userUuid, SubjectRequestDto subjectRequestDto) {
+    public Long createSubject(UUID userUuid, SubjectRequestDto subjectRequestDto) {
         String name = normalize(subjectRequestDto.getSubjectName());
+
+        // 유효한 입력인지 판단
+        if (userUuid == null) {
+            throw new UnauthenticatedException();
+        }
 
         // 1. 로그인은 했지만 DB에 존재하지 않는 경우
         if (!userRepository.existsById(userUuid)) {
@@ -42,5 +49,18 @@ public class SubjectService {
             throw new InvalidSubjectNameException();
         }
         return raw.trim();
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> listSubjectNameByUser(UUID userUuid) {
+        if (userUuid == null) {
+            throw new UnauthenticatedException();
+        }
+
+        // 1. 로그인은 했지만 DB에 존재하지 않는 경우
+        if (!userRepository.existsById(userUuid)) {
+            throw new UserNotFoundException();
+        }
+        return subjectRepository.findSubjectNamesByUserUuid(userUuid);
     }
 }
