@@ -23,42 +23,22 @@ public class SubjectController {
 
     // 새로운 과목 생성하기
     @PostMapping
-    public ResponseEntity<ApiSuccessResponse<SubjectResponseDto>> createSubject(
+    public ResponseEntity<SubjectResponseDto> createSubject(
             @RequestHeader("USER-UUID") String userUuidHeader, // 임시, 스프링 시큐리티 구현 후 대체 예정
             @RequestBody SubjectRequestDto subjectRequestDto
     ){
-        // 유효한 입력인지 판단
-        if (userUuidHeader == null || userUuidHeader.isBlank()) {
-            throw new UnauthenticatedException();
-        }
-        final UUID userUuid;
-        try {
-            userUuid = UUID.fromString(userUuidHeader);
-        } catch (IllegalArgumentException ex) {
-            throw new BaseException(ErrorCode.INVALID_INPUT_VALUE);
-        }
-
+        final UUID userUuid = UUID.fromString(userUuidHeader);
         Long id = subjectService.createSubject(userUuid, subjectRequestDto);
-        SubjectResponseDto apiPayload = new SubjectResponseDto(id);
-        return ResponseEntity.ok(ApiSuccessResponse.ok("과목 생성 성공",apiPayload));
+        return ResponseEntity.ok(new SubjectResponseDto(id));
     }
 
     // 기존 과목 조회하기
     @GetMapping
-    public ResponseEntity<ApiSuccessResponse<List<String>>> listSubject(
+    public ResponseEntity<List<String>> listSubject(
             @RequestHeader("USER-UUID") String userUuidHeader
     ) {
-        if (userUuidHeader == null || userUuidHeader.isBlank()) {
-            throw new UnauthenticatedException();
-        }
-        final UUID userUuid;
-        try {
-            userUuid = UUID.fromString(userUuidHeader);
-        } catch (IllegalArgumentException illegalArgumentException) {
-            throw new BaseException(ErrorCode.INVALID_INPUT_VALUE);
-        }
-
+        final UUID userUuid = UUID.fromString(userUuidHeader);
         List<String> subjects = subjectService.listSubjectNameByUser(userUuid);
-        return ResponseEntity.ok(ApiSuccessResponse.ok("과목 목록 조회 성공", subjects));
+        return ResponseEntity.ok(subjects);
     }
 }

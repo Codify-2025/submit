@@ -3,6 +3,7 @@ package Codify.submit.service;
 import Codify.submit.domain.Subjects;
 import Codify.submit.exception.InvalidSubjectNameException;
 import Codify.submit.exception.SubjectAlreadyExistsException;
+import Codify.submit.exception.UnauthenticatedException;
 import Codify.submit.exception.UserNotFoundException;
 import Codify.submit.repository.SubjectRepository;
 import Codify.submit.repository.UserRepository;
@@ -23,6 +24,11 @@ public class SubjectService {
     @Transactional
     public Long createSubject(UUID userUuid, SubjectRequestDto subjectRequestDto) {
         String name = normalize(subjectRequestDto.getSubjectName());
+
+        // 유효한 입력인지 판단
+        if (userUuid == null) {
+            throw new UnauthenticatedException();
+        }
 
         // 1. 로그인은 했지만 DB에 존재하지 않는 경우
         if (!userRepository.existsById(userUuid)) {
@@ -47,7 +53,11 @@ public class SubjectService {
 
     @Transactional(readOnly = true)
     public List<String> listSubjectNameByUser(UUID userUuid) {
-        // 존재하지 않는 사용자
+        if (userUuid == null) {
+            throw new UnauthenticatedException();
+        }
+
+        // 1. 로그인은 했지만 DB에 존재하지 않는 경우
         if (!userRepository.existsById(userUuid)) {
             throw new UserNotFoundException();
         }
