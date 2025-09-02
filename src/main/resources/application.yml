@@ -43,6 +43,8 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+  server:
+    port: ${MANAGEMENT_PORT}
 
 codify:
   dev:
