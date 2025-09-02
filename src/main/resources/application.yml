@@ -38,8 +38,6 @@ management:
     prometheus:
       enabled: true
   health:
-    livenessstate:
-      enabled: true
     readinessstate:
       enabled: true
   metrics:
