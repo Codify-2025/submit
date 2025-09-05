@@ -26,7 +26,6 @@ public class AssignmentService {
     public Long createAssignment(UUID userUuid, Long subjectId, AssignmentRequestDto requestDto) {
         validateUser(userUuid);
 
-        // 과목 소유권 확인
         final Subjects subject = subjectRepository.findById(subjectId)
                 .orElseThrow(SubjectNotFoundException::new);
         if (!subject.getUserUuid().equals(userUuid)) {
@@ -45,10 +44,10 @@ public class AssignmentService {
         }
 
         if (start.isAfter(end)) {
-            throw new InvalidDateRangeException(); // "시작일이 종료일보다 늦을 수 없습니다."
+            throw new InvalidDateRangeException();
         }
         if (requestDto.getWeek() == null || requestDto.getWeek() <= 0) {
-            throw new InvalidAssignmentNameException(); // 별도 에러코드 만들면 더 좋음 (e.g., INVALID_WEEK)
+            throw new InvalidAssignmentNameException();
         }
 
         // 중복 과제명 방지
