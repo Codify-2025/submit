@@ -1,11 +1,13 @@
 package Codify.submit.web.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter
@@ -20,10 +22,12 @@ public class AssignmentRequestDto {
     private String assignmentName;
 
     @NotNull
-    private LocalDateTime startDate;
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate startDate;
 
-    // @NotNull
-    private LocalDateTime endDate;
+    // 사용자가 수동으로 기간 설정 시에만 채움 (자동: 7일)
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate endDate;
 
     @NotNull
     @Positive

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -33,22 +34,21 @@ public class AssignmentService {
         }
 
         // 입력 검증
-        final String assignmentName  = normalizeAssignment(requestDto.getAssignmentName());
+        final String assignmentName = normalizeAssignment(requestDto.getAssignmentName());
         // 기간 검증
-        final var start = requestDto.getStartDate();
-        LocalDateTime end   = requestDto.getEndDate();
-
+        final LocalDate startD = requestDto.getStartDate();
+        LocalDate endD = requestDto.getEndDate();
         // 자동 설정
-        if (end == null) {
-            end = start.toLocalDate().plusDays(7).atTime(23, 59, 59);
+        if (endD == null) {
+            endD = startD.plusDays(7);
         }
 
-        if (start.isAfter(end)) {
+        if (endD.isBefore(startD)) {
             throw new InvalidDateRangeException();
         }
-        if (requestDto.getWeek() == null || requestDto.getWeek() <= 0) {
-            throw new InvalidAssignmentNameException();
-        }
+
+        final LocalDateTime start = startD.atStartOfDay();      // 시간대 자동 설정: 00:00:00
+        final LocalDateTime end   = endD.atTime(23, 59, 59);    // 시간대 자동 설정: 23:59:59
 
         // 중복 과제명 방지
         if (assignmentRepository.existsByUserUuidAndSubjectIdAndAssignmentName(
@@ -62,7 +62,7 @@ public class AssignmentService {
         // 주차/기간 설정
         final Assignment assignment = Assignment.builder()
                 .userUuid(userUuid)
-                .subjectId(subject.getSubjectId())
+                .subjectId(subjectId)
                 .assignmentName(assignmentName)
                 .startDate(startTS)
                 .endDate(endTS)
@@ -75,10 +75,6 @@ public class AssignmentService {
     private void validateUser(UUID userUuid) {
         if (userUuid == null) throw new UnauthenticatedException();
         if (!userRepository.existsById(userUuid)) throw new UserNotFoundException();
-    }
-    private String normalizeSubject(String s) {
-        if (s == null || s.trim().isEmpty()) throw new InvalidSubjectNameException();
-        return s.trim();
     }
     private String normalizeAssignment(String s) {
         if (s == null || s.trim().isEmpty()) throw new InvalidAssignmentNameException();
