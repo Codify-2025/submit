@@ -25,13 +25,16 @@ public class AssignmentService {
 
     @Transactional
     public Long createAssignment(UUID userUuid, Long subjectId, AssignmentRequestDto requestDto) {
-        validateUser(userUuid);
 
-        final Subjects subject = subjectRepository.findById(subjectId)
-                .orElseThrow(SubjectNotFoundException::new);
-        if (!subject.getUserUuid().equals(userUuid)) {
+        if (userUuid == null) {
             throw new UnauthenticatedException();
         }
+        if (!userRepository.existsById(userUuid)) {
+            throw new UserNotFoundException();
+        }
+
+        final Subjects subject = subjectRepository.findBySubjectIdAndUserUuid(subjectId, userUuid)
+                .orElseThrow(SubjectNotFoundException::new);
 
         // 입력 검증
         final String assignmentName = normalizeAssignment(requestDto.getAssignmentName());
@@ -52,7 +55,7 @@ public class AssignmentService {
 
         // 중복 과제명 방지
         if (assignmentRepository.existsByUserUuidAndSubjectIdAndAssignmentName(
-                userUuid, subject.getSubjectId(), assignmentName)) {
+                userUuid, subjectId, assignmentName)) {
             throw new AssignmentAlreadyExistsException();
         }
 
@@ -72,10 +75,6 @@ public class AssignmentService {
         return assignmentRepository.save(assignment).getAssignmentId();
     }
 
-    private void validateUser(UUID userUuid) {
-        if (userUuid == null) throw new UnauthenticatedException();
-        if (!userRepository.existsById(userUuid)) throw new UserNotFoundException();
-    }
     private String normalizeAssignment(String s) {
         if (s == null || s.trim().isEmpty()) throw new InvalidAssignmentNameException();
         return s.trim();

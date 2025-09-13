@@ -15,4 +15,6 @@ public interface SubjectRepository extends JpaRepository<Subjects, Long> {
     @Query("select s.subjectName from Subjects s where s.userUuid = :userUuid order by s.subjectName asc")
     List<String> findSubjectNamesByUserUuid(UUID userUuid);
 
+    Optional<Subjects> findBySubjectIdAndUserUuid(Long subjectId, UUID userUuid);
+
 }

@@ -1,6 +1,5 @@
 package Codify.submit.web.controller;
 
-
 import Codify.submit.service.AssignmentService;
 import Codify.submit.web.dto.AssignmentRequestDto;
 import Codify.submit.web.dto.AssignmentResponseDto;
@@ -25,6 +24,6 @@ public class AssignmentController {
     ) {
         final UUID userUuid = UUID.fromString(userUuidHeader);
         final Long assignmentId = assignmentService.createAssignment(userUuid, subjectId, requestDto);
-        return ResponseEntity.ok(AssignmentResponseDto.of(assignmentId));
+        return ResponseEntity.ok(new AssignmentResponseDto(assignmentId));
     }
 }

@@ -15,7 +15,6 @@ public class SwaggerConfig {
                 .description("Codify Submit API 명세서")
                 .version("1.0.0");
 
-
         return new OpenAPI()
                 .addServersItem(new Server().url("/"))
                 .info(info);
