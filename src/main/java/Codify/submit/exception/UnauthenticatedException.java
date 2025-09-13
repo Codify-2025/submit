@@ -4,5 +4,6 @@ import Codify.submit.exception.baseException.BaseException;
 
 public class UnauthenticatedException extends BaseException {
     public UnauthenticatedException() {
-        super(ErrorCode.UNAUTHORIZED); }
+        super(ErrorCode.UNAUTHORIZED);
+    }
 }

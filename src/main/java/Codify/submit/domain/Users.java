@@ -14,7 +14,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "Users")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Users { // 조회 용도로만 사용중
+public class Users {
     @Id
     @Column(name = "userUuid")
     private UUID userUuid;

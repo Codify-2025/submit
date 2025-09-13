@@ -1,12 +1,9 @@
 package Codify.submit.web.controller;
 
-import Codify.submit.exception.ApiSuccessResponse;
-import Codify.submit.exception.ErrorCode;
-import Codify.submit.exception.UnauthenticatedException;
-import Codify.submit.exception.baseException.BaseException;
 import Codify.submit.service.SubjectService;
 import Codify.submit.web.dto.SubjectRequestDto;
 import Codify.submit.web.dto.SubjectResponseDto;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,7 +22,7 @@ public class SubjectController {
     @PostMapping
     public ResponseEntity<SubjectResponseDto> createSubject(
             @RequestHeader("USER-UUID") String userUuidHeader, // 임시, 스프링 시큐리티 구현 후 대체 예정
-            @RequestBody SubjectRequestDto subjectRequestDto
+            @Valid @RequestBody SubjectRequestDto subjectRequestDto
     ){
         final UUID userUuid = UUID.fromString(userUuidHeader);
         Long id = subjectService.createSubject(userUuid, subjectRequestDto);
