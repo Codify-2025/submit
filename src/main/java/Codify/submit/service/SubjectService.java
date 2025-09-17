@@ -8,6 +8,7 @@ import Codify.submit.exception.UserNotFoundException;
 import Codify.submit.repository.SubjectRepository;
 import Codify.submit.repository.UserRepository;
 import Codify.submit.web.dto.SubjectRequestDto;
+import Codify.submit.web.dto.SubjectResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +23,7 @@ public class SubjectService {
     private final UserRepository userRepository;
 
     @Transactional
-    public Long createSubject(UUID userUuid, SubjectRequestDto subjectRequestDto) {
+    public SubjectResponseDto createSubject(UUID userUuid, SubjectRequestDto subjectRequestDto) {
         String name = normalize(subjectRequestDto.getSubjectName());
 
         // 유효한 입력인지 판단
@@ -41,7 +42,7 @@ public class SubjectService {
         }
 
         Subjects saved = subjectRepository.save(new Subjects(userUuid, name));
-        return saved.getSubjectId();
+        return new SubjectResponseDto(saved.getSubjectId(), saved.getSubjectName());
     }
 
     private String normalize(String raw) {
@@ -52,7 +53,7 @@ public class SubjectService {
     }
 
     @Transactional(readOnly = true)
-    public List<String> listSubjectNameByUser(UUID userUuid) {
+    public List<SubjectResponseDto> listSubjectNameByUser(UUID userUuid) {
         if (userUuid == null) {
             throw new UnauthenticatedException();
         }
@@ -61,6 +62,6 @@ public class SubjectService {
         if (!userRepository.existsById(userUuid)) {
             throw new UserNotFoundException();
         }
-        return subjectRepository.findSubjectNamesByUserUuid(userUuid);
+        return subjectRepository.findSubjectsByUserUuid(userUuid);
     }
 }
