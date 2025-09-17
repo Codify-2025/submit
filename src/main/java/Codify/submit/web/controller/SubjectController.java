@@ -25,17 +25,17 @@ public class SubjectController {
             @Valid @RequestBody SubjectRequestDto subjectRequestDto
     ){
         final UUID userUuid = UUID.fromString(userUuidHeader);
-        Long id = subjectService.createSubject(userUuid, subjectRequestDto);
-        return ResponseEntity.ok(new SubjectResponseDto(id));
+        SubjectResponseDto subjectResponseDto = subjectService.createSubject(userUuid, subjectRequestDto);
+        return ResponseEntity.ok(subjectResponseDto);
     }
 
     // 기존 과목 조회하기
     @GetMapping
-    public ResponseEntity<List<String>> listSubject(
+    public ResponseEntity<List<SubjectResponseDto>> listSubject(
             @RequestHeader("USER-UUID") String userUuidHeader
     ) {
         final UUID userUuid = UUID.fromString(userUuidHeader);
-        List<String> subjects = subjectService.listSubjectNameByUser(userUuid);
+        List<SubjectResponseDto> subjects = subjectService.listSubjectNameByUser(userUuid);
         return ResponseEntity.ok(subjects);
     }
 }
